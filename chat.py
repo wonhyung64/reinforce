@@ -13,7 +13,7 @@ def chat(message):
 
 
 if __name__ == "__main__":
-    openai.api_key_path = "chatGPT_api_key.txt"
+    openai.api_key_path = "./cred/chatGPT_api_key.txt"
 
     database = "뮤즈는 서울대학교 경영대학 기타 동아리이며,\
         가입조건은 서울대학교 경영대학 재학생이어야 한다. \
