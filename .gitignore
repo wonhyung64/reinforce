@@ -20,3 +20,4 @@ bin-release/
 cred/
 data/
 chatgpt/
+__pycache__/
