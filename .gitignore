@@ -21,3 +21,6 @@ cred/
 data/
 chatgpt/
 __pycache__/
+.DS_Store
+checkpoints/
+*.mp4

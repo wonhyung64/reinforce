@@ -10,7 +10,7 @@ def initialize_mario() -> JoypadSpace:
     Returns:
         JoypadSpace: environment object
     """
-    env = gym_super_mario_bros.make("SuperMarioBros-1-1-v3", render_mode="rbg", apply_api_compatibility=True)
+    env = gym_super_mario_bros.make("SuperMarioBros-1-1-v0", render_mode="rbg", apply_api_compatibility=True)
     if gym.__version__ < "0.26":
         env = gym_super_mario_bros.make("SuperMarioBros-1-1-v0", new_step_api=True)
     env = JoypadSpace(env, [["right"], ["right", "A"]])

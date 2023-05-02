@@ -7,3 +7,15 @@ from module.preprocess.image import (
     SkipFrame,
     GrayScaleObservation,
 )
+
+from module.mario.model import (
+    MarioNet,
+)
+
+from module.mario.algorithm import (
+    Mario,
+)
+
+from module.mario.logger import (
+    MetricLogger,
+)

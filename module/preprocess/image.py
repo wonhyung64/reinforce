@@ -109,7 +109,7 @@ class ResizeObservation(gym.ObservationWrapper):
         """
 
         transforms = T.Compose(
-            [T.resize(self.shape), T.Normalize(0, 255)]
+            [T.Resize(self.shape), T.Normalize(0, 255)]
         )
         obs = transforms(obs).squeeze(0)
         return obs
