@@ -1,30 +1,21 @@
 import copy
-import torch
-from torch import nn
+import torch.nn as nn
 
 
 class MarioNet(nn.Module):
-    def __init__(self, input_dim: int, output_dim: int) -> None:
-        """
-        Mini CNN structured model
-        input -> (conv2d + relu) x 3 -> flatten -> (dense + relu) x 2 -> output
+    """작은 CNN 구조
+    입력 -> (conv2d + relu) x 3 -> flatten -> (dense + relu) x 2 -> 출력
+    """
 
-        Args:
-            input_dim (int): image size
-            output_dim (int): number of action
-
-        Raises:
-            ValueError: not matched height
-            ValueError: not matched weight
-        """
+    def __init__(self, input_dim, output_dim):
         super().__init__()
         c, h, w = input_dim
 
         if h != 84:
             raise ValueError(f"Expecting input height: 84, got: {h}")
         if w != 84:
-            raise ValueError(f"Expecting input weight: 84, got: {w}")
-        
+            raise ValueError(f"Expecting input width: 84, got: {w}")
+
         self.online = nn.Sequential(
             nn.Conv2d(in_channels=c, out_channels=32, kernel_size=8, stride=4),
             nn.ReLU(),
@@ -37,23 +28,14 @@ class MarioNet(nn.Module):
             nn.ReLU(),
             nn.Linear(512, output_dim),
         )
+
         self.target = copy.deepcopy(self.online)
 
+        # Q_target 매개변수 값은 고정시킵니다.
         for p in self.target.parameters():
             p.requires_grad = False
-    
-    def forward(self, input: torch.Tensor, model: str) -> nn.modules.container.Sequential:
-        """
-        Return predict/target model 
 
-        Args:
-            input (torch.Tensor): input image
-            model (str): type of model
-
-        Returns:
-            nn.modules.container.Sequential: selected model
-        """
-
+    def forward(self, input, model):
         if model == "online":
             return self.online(input)
         elif model == "target":

@@ -5,45 +5,18 @@ from collections import deque
 from .model import MarioNet
 
 
-"""DEFAULT"""
 class Mario:
-    def __init__():
-        pass
-
-    def act(self, state):
-        """Given a state, choose an epsilon-greedy action"""
-        pass
-
-    def cache(self, experience):
-        """Add the experience to memory"""
-        pass
-
-    def recall(self):
-        """Sample experiences from memory"""
-        pass
-
-    def learn(self):
-        """Update online action value (Q) function with a batch of experiences"""
-        pass
-
-
-"""ACTION"""
-class Mario(Mario):
-    def __init__(self, state_dim, action_dim, save_dir):
+    def __init__(self, state_dim, action_dim, save_dir, load_dir):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.save_dir = save_dir
 
-        if torch.cuda.is_available():
-            device = "cuda"
-        elif torch.backends.mps.is_available():
-            device = "mps"
-        else:
-            device = "cpu"
-        self.device = device
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        # Mario's DNN to predict the most optimal action - we implement this in the Learn section
+        # 마리오의 DNN은 최적의 행동을 예측합니다 - 이는 학습하기 섹션에서 구현합니다.
         self.net = MarioNet(self.state_dim, self.action_dim).float()
+        if load_dir:
+            self.net.load_state_dict(torch.load(load_dir))
         self.net = self.net.to(device=self.device)
 
         self.exploration_rate = 1
@@ -51,41 +24,40 @@ class Mario(Mario):
         self.exploration_rate_min = 0.1
         self.curr_step = 0
 
-        self.save_every = 5e5  # no. of experiences between saving Mario Net
+        self.save_every = 5e5  # Mario Net 저장 사이의 경험 횟수
 
     def act(self, state):
         """
-    Given a state, choose an epsilon-greedy action and update value of step.
+    주어진 상태에서, 입실론-그리디 행동(epsilon-greedy action)을 선택하고, 스텝의 값을 업데이트 합니다.
 
-    Inputs:
-    state(``LazyFrame``): A single observation of the current state, dimension is (state_dim)
-    Outputs:
-    ``action_idx`` (``int``): An integer representing which action Mario will perform
+    입력값:
+    state (``LazyFrame``): 현재 상태에서의 단일 상태(observation)값을 말합니다. 차원은 (state_dim)입니다.
+    출력값:
+    ``action_idx`` (int): Mario가 수행할 행동을 나타내는 정수 값입니다.
     """
-        # EXPLORE
+        # 임의의 행동을 선택하기
         if np.random.rand() < self.exploration_rate:
             action_idx = np.random.randint(self.action_dim)
 
-        # EXPLOIT
+        # 최적의 행동을 이용하기
         else:
             state = state[0].__array__() if isinstance(state, tuple) else state.__array__()
             state = torch.tensor(state, device=self.device).unsqueeze(0)
             action_values = self.net(state, model="online")
             action_idx = torch.argmax(action_values, axis=1).item()
 
-        # decrease exploration_rate
+        # exploration_rate 감소하기
         self.exploration_rate *= self.exploration_rate_decay
         self.exploration_rate = max(self.exploration_rate_min, self.exploration_rate)
 
-        # increment step
+        # 스텝 수 증가하기
         self.curr_step += 1
         return action_idx
 
 
-"""EXPERIENCE REPLAY"""
-class Mario(Mario):  # subclassing for continuity
-    def __init__(self, state_dim, action_dim, save_dir):
-        super().__init__(state_dim, action_dim, save_dir)
+class Mario(Mario):  # 연속성을 위한 하위 클래스입니다.
+    def __init__(self, state_dim, action_dim, save_dir, load_dir):
+        super().__init__(state_dim, action_dim, save_dir, load_dir)
         self.memory = deque(maxlen=100000)
         self.batch_size = 32
 
@@ -93,7 +65,7 @@ class Mario(Mario):  # subclassing for continuity
         """
         Store the experience to self.memory (replay buffer)
 
-        Inputs:
+        입력값:
         state (``LazyFrame``),
         next_state (``LazyFrame``),
         action (``int``),
@@ -115,17 +87,16 @@ class Mario(Mario):  # subclassing for continuity
 
     def recall(self):
         """
-        Retrieve a batch of experiences from memory
+        메모리에서 일련의 경험들을 검색합니다.
         """
         batch = random.sample(self.memory, self.batch_size)
         state, next_state, action, reward, done = map(torch.stack, zip(*batch))
         return state, next_state, action.squeeze(), reward.squeeze(), done.squeeze()
 
 
-"""CALCULATE TD"""
 class Mario(Mario):
-    def __init__(self, state_dim, action_dim, save_dir):
-        super().__init__(state_dim, action_dim, save_dir)
+    def __init__(self, state_dim, action_dim, save_dir, load_dir):
+        super().__init__(state_dim, action_dim, save_dir, load_dir)
         self.gamma = 0.9
 
     def td_estimate(self, state, action):
@@ -144,10 +115,9 @@ class Mario(Mario):
         return (reward + (1 - done.float()) * self.gamma * next_Q).float()
 
 
-"""PARAMETER UPDATE"""
 class Mario(Mario):
-    def __init__(self, state_dim, action_dim, save_dir):
-        super().__init__(state_dim, action_dim, save_dir)
+    def __init__(self, state_dim, action_dim, save_dir, load_dir):
+        super().__init__(state_dim, action_dim, save_dir, load_dir)
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.00025)
         self.loss_fn = torch.nn.SmoothL1Loss()
 
@@ -162,7 +132,6 @@ class Mario(Mario):
         self.net.target.load_state_dict(self.net.online.state_dict())
 
 
-"""SAVE WEIGHTS"""
 class Mario(Mario):
     def save(self):
         save_path = (
@@ -175,13 +144,12 @@ class Mario(Mario):
         print(f"MarioNet saved to {save_path} at step {self.curr_step}")
 
 
-"""RUN ALGORITHM"""
 class Mario(Mario):
-    def __init__(self, state_dim, action_dim, save_dir):
-        super().__init__(state_dim, action_dim, save_dir)
-        self.burnin = 1e4  # min. experiences before training
-        self.learn_every = 3  # no. of experiences between updates to Q_online
-        self.sync_every = 1e4  # no. of experiences between Q_target & Q_online sync
+    def __init__(self, state_dim, action_dim, save_dir, load_dir):
+        super().__init__(state_dim, action_dim, save_dir, load_dir)
+        self.burnin = 1e4  # 학습을 진행하기 전 최소한의 경험값.
+        self.learn_every = 3  # Q_online 업데이트 사이의 경험 횟수.
+        self.sync_every = 1e4  # Q_target과 Q_online sync 사이의 경험 수
 
     def learn(self):
         if self.curr_step % self.sync_every == 0:
@@ -196,16 +164,16 @@ class Mario(Mario):
         if self.curr_step % self.learn_every != 0:
             return None, None
 
-        # Sample from memory
+        # 메모리로부터 샘플링을 합니다.
         state, next_state, action, reward, done = self.recall()
 
-        # Get TD Estimate
+        # TD 추정값을 가져옵니다.
         td_est = self.td_estimate(state, action)
 
-        # Get TD Target
+        # TD 목표값을 가져옵니다.
         td_tgt = self.td_target(reward, next_state, done)
 
-        # Backpropagate loss through Q_online
+        # 실시간 Q(Q_online)을 통해 역전파 손실을 계산합니다.
         loss = self.update_Q_online(td_est, td_tgt)
 
         return (td_est.mean().item(), loss)

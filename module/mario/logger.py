@@ -17,22 +17,22 @@ class MetricLogger:
         self.ep_avg_losses_plot = save_dir / "loss_plot.jpg"
         self.ep_avg_qs_plot = save_dir / "q_plot.jpg"
 
-        # History metrics
+        # 지표(Metric)와 관련된 리스트입니다.
         self.ep_rewards = []
         self.ep_lengths = []
         self.ep_avg_losses = []
         self.ep_avg_qs = []
 
-        # Moving averages, added for every call to record()
+        # 모든 record() 함수를 호출한 후 이동 평균(Moving average)을 계산합니다.
         self.moving_avg_ep_rewards = []
         self.moving_avg_ep_lengths = []
         self.moving_avg_ep_avg_losses = []
         self.moving_avg_ep_avg_qs = []
 
-        # Current episode metric
+        # 현재 에피스드에 대한 지표를 기록합니다.
         self.init_episode()
 
-        # Timing
+        # 시간에 대한 기록입니다.
         self.record_time = time.time()
 
     def log_step(self, reward, loss, q):
@@ -44,7 +44,7 @@ class MetricLogger:
             self.curr_ep_loss_length += 1
 
     def log_episode(self):
-        "Mark end of episode"
+        "에피스드의 끝을 표시합니다."
         self.ep_rewards.append(self.curr_ep_reward)
         self.ep_lengths.append(self.curr_ep_length)
         if self.curr_ep_loss_length == 0:

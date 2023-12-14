@@ -8,29 +8,16 @@ from typing import Tuple, List, Union
 
 
 class SkipFrame(gym.Wrapper):
-    def __init__(self, env: JoypadSpace, skip_num: int) -> None:
-        """
-        Return only every 'skip_num'-th frame
-
-        Args:
-            env (JoypadSpace): environment object
-            skip_num (int): number of frames to skip
-        """
+    def __init__(self, env, skip):
+        """모든 `skip` 프레임만 반환합니다."""
         super().__init__(env)
-        self._skip_num = skip_num
+        self._skip = skip
 
-    def skip(self, action: int) -> Tuple:
-        """
-        Repeat the same action and accumulate rewards
-
-        Args:
-            action (int): selected action
-
-        Returns:
-            Tuple: last transtion after 'skip_num' skipping
-        """
-        total_reward = 0.
-        for _ in range(self._skip_num):
+    def step(self, action):
+        """행동을 반복하고 포상을 더합니다."""
+        total_reward = 0.0
+        for i in range(self._skip):
+            # 포상을 누적하고 동일한 작업을 반복합니다.
             obs, reward, done, trunk, info = self.env.step(action)
             total_reward += reward
             if done:
@@ -39,77 +26,38 @@ class SkipFrame(gym.Wrapper):
 
 
 class GrayScaleObservation(gym.ObservationWrapper):
-    def __init__(self, env: JoypadSpace):
-        """
-        Convert rgb to gray scale img
-
-        Args:
-            env (JoypadSpace): environment object
-        """
+    def __init__(self, env):
         super().__init__(env)
         obs_shape = self.observation_space.shape[:2]
         self.observation_space = Box(low=0, high=255, shape=obs_shape, dtype=np.uint8)
 
-    def _numpy2torch(self, obs: np.ndarray) -> torch.Tensor:
-        """
-        Permute [H,W,C] to [C,H,W] tensor and convert to torch.Tensor
+    def permute_orientation(self, observation):
+        # [H, W, C] 배열을 [C, H, W] 텐서로 바꿉니다.
+        observation = np.transpose(observation, (2, 0, 1))
+        observation = torch.tensor(observation.copy(), dtype=torch.float)
+        return observation
 
-        Args:
-            obs (np.ndarray): image state
-
-        Returns:
-            torch.Tensor: converted image state
-        """
-        obs = np.transpose(obs, (2, 0, 1))
-        obs = torch.tensor(obs.copy(), dtype=torch.float) 
-        return obs
-
-    def convert(self, obs: np.ndarray) -> torch.Tensor:
-        """
-        Convert [H,W,C] to [C,H,W], nd.array to torch.Tensor, RGB to Gray
-
-        Args:
-            obs (np.ndarray): RGB image ndarray 
-
-        Returns:
-            torch.Tensor: converted image
-        """
-        obs = self._numpy2torch(obs)
+    def observation(self, observation):
+        observation = self.permute_orientation(observation)
         transform = T.Grayscale()
-        obs = transform(obs)
-        return obs
+        observation = transform(observation)
+        return observation
 
 
 class ResizeObservation(gym.ObservationWrapper):
-    def __init__(self, env: JoypadSpace, shape: Union[int, Tuple, List]):
-        """
-        Resize img
-
-        Args:
-            env (JoypadSpace): envionment object
-            shape (Union[int, Tuple, List]): shape to resize
-        """
+    def __init__(self, env, shape):
         super().__init__(env)
         if isinstance(shape, int):
             self.shape = (shape, shape)
         else:
             self.shape = tuple(shape)
+
         obs_shape = self.shape + self.observation_space.shape[2:]
         self.observation_space = Box(low=0, high=255, shape=obs_shape, dtype=np.uint8)
 
-    def convert(self, obs: torch.Tensor) -> torch.Tensor:
-        """
-        Convert image size
-
-        Args:
-            obs (torch.Tensor): image to resize
-
-        Returns:
-            torch.Tensor: resized image
-        """
-
+    def observation(self, observation):
         transforms = T.Compose(
             [T.Resize(self.shape), T.Normalize(0, 255)]
         )
-        obs = transforms(obs).squeeze(0)
-        return obs
+        observation = transforms(observation).squeeze(0)
+        return observation
