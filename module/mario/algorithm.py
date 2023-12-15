@@ -16,10 +16,13 @@ class Mario:
         # 마리오의 DNN은 최적의 행동을 예측합니다 - 이는 학습하기 섹션에서 구현합니다.
         self.net = MarioNet(self.state_dim, self.action_dim).float()
         if load_dir:
-            self.net.load_state_dict(torch.load(load_dir))
+            self.net.load_state_dict(torch.load(load_dir, map_location=torch.device(self.device)), strict=False)
+            self.exploration_rate = 0
+        else:
+            self.exploration_rate = 1
+
         self.net = self.net.to(device=self.device)
 
-        self.exploration_rate = 1
         self.exploration_rate_decay = 0.99999975
         self.exploration_rate_min = 0.1
         self.curr_step = 0
