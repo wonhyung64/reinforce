@@ -26,7 +26,7 @@ from module import (
 # %%
 # 슈퍼 마리오 환경 초기화하기 (in v0.26 change render mode to 'human' to see results on the screen)
 if gym.__version__ < '0.26':
-    env = gym_super_mario_bros.make("SuperMarioBros-1-1-v0", new_step_api=True)
+    env = gym_super_mario_bros.make("SuperMarioBros-1-1-v0", )
 else:
     env = gym_super_mario_bros.make("SuperMarioBros-1-1-v0", render_mode='rgb', apply_api_compatibility=True)
 
@@ -39,7 +39,7 @@ env = SkipFrame(env, skip=4)
 env = GrayScaleObservation(env)
 env = ResizeObservation(env, shape=84)
 if gym.__version__ < '0.26':
-    env = FrameStack(env, num_stack=4, new_step_api=True)
+    env = FrameStack(env, num_stack=4)
 else:
     env = FrameStack(env, num_stack=4)
 
@@ -49,14 +49,14 @@ use_cuda = torch.cuda.is_available()
 print(f"Using CUDA: {use_cuda}")
 print()
 
-save_dir = Path("checkpoints") / datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+save_dir = Path("assets/checkpoints") / datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 save_dir.mkdir(parents=True)
 
-mario = Mario(state_dim=(4, 84, 84), action_dim=env.action_space.n, save_dir=save_dir)
+mario = Mario(state_dim=(4, 84, 84), action_dim=env.action_space.n, save_dir=save_dir, load_dir=0)
 
 logger = MetricLogger(save_dir)
 
-episodes = 10
+episodes = 50000
 for e in range(episodes):
 
     state = env.reset()
@@ -90,5 +90,5 @@ for e in range(episodes):
 
     if e % 20 == 0:
         logger.record(episode=e, epsilon=mario.exploration_rate, step=mario.curr_step)
-
+mario.save()
 # %%
