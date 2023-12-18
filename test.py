@@ -65,41 +65,46 @@ use_cuda = torch.cuda.is_available()
 print(f"Using CUDA: {use_cuda}")
 print()
 
-save_dir = Path("assets/checkpoints") / datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-save_dir.mkdir(parents=True)
+# save_dir = Path("assets/checkpoints") / datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+# save_dir.mkdir(parents=True)
+weights_dir = "/Users/wonhyung64/Github/reinforce/assets/checkpoints/2023-12-14T21-48-10"
 
-mario = Mario(state_dim=(4, 84, 84), action_dim=env.action_space.n, save_dir=save_dir, load_dir="assets/checkpoints/mario_net_10.chkpt")
+out = cv2.VideoWriter(f"{weights_dir}/color.mp4", cv2.VideoWriter_fourcc(*'DIVX'), 60, (256, 240))
+out_gray = cv2.VideoWriter(f"{weights_dir}/gray.mp4", cv2.VideoWriter_fourcc(*'DIVX'), 60, (84, 84), False)
 
-out = cv2.VideoWriter(f"{save_dir}/color.mp4", cv2.VideoWriter_fourcc(*'DIVX'), 60, (256, 240))
-out_gray = cv2.VideoWriter(f"{save_dir}/gray.mp4", cv2.VideoWriter_fourcc(*'DIVX'), 60, (84, 84), False)
+# for ckpt_name in ["mario_net_1", "mario_net_6", "mario_net_10", "mario_net_13"]:
+#     mario = Mario(state_dim=(4, 84, 84), action_dim=env.action_space.n, save_dir=weights_dir, load_dir=f"{weights_dir}/{ckpt_name}.chkpt")
+for ckpt_name in range(1,14):
+    mario = Mario(state_dim=(4, 84, 84), action_dim=env.action_space.n, save_dir=weights_dir, load_dir=f"{weights_dir}/mario_net_{ckpt_name}.chkpt")
 
-episodes = 10
-for e in range(episodes):
 
-    color_state = color_env.reset()
-    state = env.reset()
+    episodes = 1
+    for e in range(episodes):
 
-    for f in color_state[0]._frames:
-        out.write(cv2.cvtColor(f, cv2.COLOR_RGB2BGR))
+        color_state = color_env.reset()
+        state = env.reset()
 
-    for f in state[0]._frames:
-        out_gray.write((f.numpy()*255).astype(np.uint8))
-
-    # 게임을 실행시켜봅시다!
-    while True:
-        action = mario.act(state)
-
-        # 현재 상태에서 에이전트 실행하기
-        color_state, color_reward, color_done, color_trunc, color_info = color_env.step(action)
-        state, reward, done, trunc, info = env.step(action)
-
-        for f in color_state._frames:
+        for f in color_state[0]._frames:
             out.write(cv2.cvtColor(f, cv2.COLOR_RGB2BGR))
-        for f in state._frames:
+
+        for f in state[0]._frames:
             out_gray.write((f.numpy()*255).astype(np.uint8))
 
-        if done or info["flag_get"]:
-            break
+        # 게임을 실행시켜봅시다!
+        while True:
+            action = mario.act(state)
+
+            # 현재 상태에서 에이전트 실행하기
+            color_state, color_reward, color_done, color_trunc, color_info = color_env.step(action)
+            state, reward, done, trunc, info = env.step(action)
+
+            for f in color_state._frames:
+                out.write(cv2.cvtColor(f, cv2.COLOR_RGB2BGR))
+            for f in state._frames:
+                out_gray.write((f.numpy()*255).astype(np.uint8))
+
+            if done or info["flag_get"]:
+                break
 
 out.release()
 out_gray.release()
